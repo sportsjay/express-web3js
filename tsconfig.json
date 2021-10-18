@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es6",
+    "rootDir": "./",
+    "esModuleInterop": true,
+    "types": ["@types/node", "@types/chai", "@types/mocha"],
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "resolveJsonModule": true
+  }   
+}
