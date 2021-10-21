@@ -37,6 +37,31 @@ app.get("/accounts", async function (req: Request, res: Response) {
 });
 
 /**
+ * Check Public Key
+ */
+app.post("/validate", async function (req: Request, res: Response) {
+  const publicKey = req.body["publicKey"];
+
+  const accounts = await web3js.eth.getAccounts();
+
+  for (const account of accounts) {
+    if (account === publicKey) {
+      return res.json({
+        message: "Authenticated!",
+        publicKey: account,
+        isSigned: true,
+      });
+    }
+  }
+
+  return res.json({
+    message: "Fail to authenticate!",
+    publicKey: null,
+    isSigned: false,
+  });
+});
+
+/**
  * Get past transactions
  */
 app.get("/transactions/:id", async function (req: Request, res: Response) {
@@ -47,18 +72,37 @@ app.get("/transactions/:id", async function (req: Request, res: Response) {
   console.log(
     `account: ${account}'s balance: ${web3.utils.fromWei(balance, "ether")}`
   );
-  const transactions = await contract.getPastEvents("Transfer", {
+  const transactionsSent = await contract.getPastEvents("Transfer", {
     fromBlock: 0,
     toBlock: "latest",
     filter: {
-      from: account,
+      _from: account,
     },
   });
 
+  const transactionsReceived = await contract.getPastEvents("Transfer", {
+    fromBlock: 0,
+    toBlock: "latest",
+    filter: {
+      _to: account,
+    },
+  });
+
+  const combinedTransaction = [
+    ...transactionsSent,
+    ...transactionsReceived,
+  ].sort((a, b) => b.blockNumber - a.blockNumber);
+
   res.json({
-    message: `account: ${account}'s list of transcations: ${transactions.length}`,
-    data: transactions.map((event) => event.returnValues),
-    balance: web3.utils.fromWei(balance.toString(), "ether"),
+    message: `account: ${account}'s list of transcations: ${
+      transactionsSent.length + transactionsReceived.length
+    }`,
+    data: combinedTransaction.map((event) => ({
+      ...event,
+      transferAmount: web3.utils.fromWei(event.returnValues._value, "ether"),
+    })),
+
+    balance: web3.utils.fromWei(balance, "ether"),
   });
 });
 
